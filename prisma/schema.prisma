@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  NEW
+  SCREENING
+  MEETING_SCHEDULED
+  DUE_DILIGENCE
+  IC_PREPARATION
+  IC_APPROVED
+  LEGAL
+  INVESTED
+  PASSED
+  ON_HOLD
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+  CANCELED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum RoundStage {
+  ANGEL
+  SEED
+  SERIES_A
+  SERIES_B
+  SERIES_C
+  GROWTH
+  PRE_IPO
+  BUYOUT
+}
+
+enum DocumentType {
+  PITCH_DECK
+  FINANCIAL_MODEL
+  DD_REPORT
+  DATA_ROOM
+  TERM_SHEET
+  LEGAL
+  MEMO
+  OTHER
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  role         String
+  avatarUrl    String?
+  tasks        Task[]
+  meetings     Meeting[]
+  activityLogs ActivityLog[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Company {
+  id              String           @id @default(cuid())
+  name            String
+  legalName       String?
+  sector          String
+  subsector       String?
+  geography       String
+  website         String?
+  description     String
+  stage           String
+  headcount       Int?
+  foundedYear     Int?
+  projects        Project[]
+  financingRounds FinancingRound[]
+  contacts        Contact[]
+  documents       Document[]
+  activityLogs    ActivityLog[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  type      String
+  website   String?
+  notes     String?
+  contacts  Contact[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Contact {
+  id              String           @id @default(cuid())
+  name            String
+  title           String
+  email           String?
+  phone           String?
+  relationship    String
+  organizationId  String?
+  companyId       String?
+  organization    Organization?    @relation(fields: [organizationId], references: [id])
+  company         Company?         @relation(fields: [companyId], references: [id])
+  projectContacts ProjectContact[]
+  meetings        Meeting[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Project {
+  id              String           @id @default(cuid())
+  slug            String           @unique
+  name            String
+  status          ProjectStatus    @default(NEW)
+  source          String
+  owner           String
+  thesis          String
+  summary         String
+  risk            String?
+  nextStep        String           @default("Review opportunity")
+  priority        Int              @default(2)
+  probability     Int              @default(25)
+  progress        Int              @default(0)
+  expectedCheck   Int?
+  targetOwnership Float?
+  companyId       String
+  company         Company          @relation(fields: [companyId], references: [id])
+  financingRounds FinancingRound[]
+  tasks           Task[]
+  meetings        Meeting[]
+  projectContacts ProjectContact[]
+  documents       Document[]
+  activityLogs    ActivityLog[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model FinancingRound {
+  id             String     @id @default(cuid())
+  stage          RoundStage
+  amount         Int
+  currency       String     @default("USD")
+  valuation      Int?
+  leadInvestor   String?
+  closeDate      DateTime?
+  notes          String?
+  companyId      String
+  projectId      String?
+  company        Company    @relation(fields: [companyId], references: [id])
+  project        Project?   @relation(fields: [projectId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  projectId   String
+  assigneeId  String?
+  project     Project      @relation(fields: [projectId], references: [id])
+  assignee    User?        @relation(fields: [assigneeId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Meeting {
+  id        String    @id @default(cuid())
+  title     String
+  agenda    String?
+  notes     String?
+  startsAt  DateTime
+  endsAt    DateTime?
+  projectId String
+  ownerId   String?
+  contactId String?
+  project   Project   @relation(fields: [projectId], references: [id])
+  owner     User?     @relation(fields: [ownerId], references: [id])
+  contact   Contact?  @relation(fields: [contactId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model ProjectContact {
+  id        String   @id @default(cuid())
+  role      String
+  projectId String
+  contactId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, contactId])
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  name        String
+  type        DocumentType @default(OTHER)
+  url         String
+  notes       String?
+  sensitivity String       @default("Internal")
+  projectId   String?
+  companyId   String?
+  project     Project?     @relation(fields: [projectId], references: [id])
+  company     Company?     @relation(fields: [companyId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  detail    String
+  projectId String?
+  companyId String?
+  userId    String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  company   Company? @relation(fields: [companyId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
