@@ -1,9 +1,5 @@
 # Primary Market Workflow MVP
 
-Local web app MVP for VC/PE/FA primary market workflow management.
-
-# Investment Research OS
-
 An AI-native investment research and deal workflow operating system for venture capital and private market teams.
 
 ---
